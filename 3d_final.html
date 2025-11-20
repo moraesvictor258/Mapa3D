@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Perfil 3D Ferramentas</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root{
+      --obramax-blue:#021F59;
+      --obramax-orange:#F27405;
+    }
+    body{
+      margin:0;
+      display:flex;
+      height:100vh;
+      font-family:system-ui,sans-serif;
+      background:#f4f4f4;
+    }
+#left{
+  flex:1;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+  min-width:0;      /* 👈 permite o gráfico encolher dentro do flex */
+  overflow:hidden;  /* 👈 opcional: corta qualquer sobra horizontal  */
+}
+
+    #botoes-visao{
+      display:flex;
+      gap:10px;
+      padding:12px 16px;
+      background:#ffffff;
+      border-bottom:2px solid #ddd;
+    }
+    .visao-btn{
+      padding:8px 14px;
+      border-radius:6px;
+      border:2px solid var(--obramax-blue);
+      background:transparent;
+      color:var(--obramax-blue);
+      font-size:13px;
+      font-weight:600;
+      cursor:pointer;
+      transition:.2s;
+    }
+    .visao-btn:hover{
+      background:var(--obramax-orange);
+      border-color:var(--obramax-orange);
+      color:#fff;
+    }
+    #plot{
+      width:100%;
+      flex:1;
+    }
+    #right{
+      width:510px;
+      background:var(--obramax-blue);
+      border-left:2px solid #021F59;
+      padding:24px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      color:#fff;
+      box-sizing:border-box;
+    }
+    #foto{
+      width:210px;
+      height:250px;
+      margin-bottom:20px;
+      overflow:hidden;
+      background:#021F59;
+      clip-path:polygon(12% 0,100% 0,88% 100%,0 100%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:2px solid #ffffff55;
+      box-shadow:0 2px 6px rgba(0,0,0,.25);
+    }
+    #foto img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    #nome{
+      font-size:22px;
+      font-weight:700;
+      margin-bottom:4px;
+      text-align:center;
+      color:var(--obramax-orange);
+    }
+    #missao-top{
+      font-size:14px;
+      margin-bottom:4px;
+      text-align:center;
+      color:#ffffffdd;
+    }
+    #arquetipo{
+      font-size:17px;
+      text-align:center;
+      margin-bottom:8px;
+      color:#fff;
+      line-height:1.2;
+    }
+    #descricao-arquetipo{
+      font-size:13px;
+      color:#ffffffcc;
+      text-align:center;
+      white-space:pre-line;
+      margin-bottom:12px;
+    }
+    .bloco{
+      width:100%;
+      font-size:13px;
+      margin-top:8px;
+    }
+    .bloco-titulo{
+      font-weight:600;
+      text-transform:uppercase;
+      margin-bottom:4px;
+      text-align:center;
+    }
+    .linha-contexto{
+      display:flex;
+      align-items:center;
+      gap:4px;
+      font-size:12px;
+      margin-top:2px;
+    }
+    .linha-contexto span.label::after{
+      content:":";
+      margin-right:2px;
+    }
+    #placeholder-selecao{
+      font-size:13px;
+      color:#ffffffaa;
+      text-align:center;
+      margin-top:6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="left">
+    <div id="botoes-visao">
+      <button class="visao-btn" data-visao="acao-lideranca">Liderança × Ação</button>
+      <button class="visao-btn" data-visao="lideranca-planejamento">Liderança × Planejamento</button>
+      <button class="visao-btn" data-visao="planejamento-acao">Planejamento × Ação</button>
+      <button class="visao-btn" data-visao="perspectiva">Perspectiva</button>
+    </div>
+    <div id="plot"></div>
+  </div>
+
+  <div id="right">
+    <div id="foto"></div>
+    <div id="nome">Selecione alguém</div>
+    <div id="missao-top"></div>
+    <div id="arquetipo"></div>
+    <div id="descricao-arquetipo"></div>
+
+    <div id="placeholder-selecao">
+      Clique em um ponto no cubo para ver o perfil completo.
+    </div>
+
+    <div class="bloco">
+      <div class="bloco-titulo">Histórico</div>
+      <div id="missao"></div>
+      <div class="linha-contexto">
+        <span class="label">Tempo na missão</span>
+        <span class="valor" id="tempo-missao"></span>
+      </div>
+      <div class="linha-contexto">
+        <span class="label">Tempo de Obramax</span>
+        <span class="valor" id="tempo-obm"></span>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <div class="bloco-titulo">Desenvolvimento</div>
+      <div class="linha-contexto">
+        <span class="label">Pontos Fortes</span>
+        <span class="valor" id="pontos-fortes"></span>
+      </div>
+      <div class="linha-contexto">
+        <span class="label">Oportunidades</span>
+        <span class="valor" id="oportunidades"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DADOS EMBUTIDOS EM JSON (vindo da planilha) -->
+  <script id="dados-json" type="application/json">
+[
+  {
+    "nome": "Suzana",
+    "acao": 2.6,
+    "planejamento": 1.8,
+    "lideranca": 1.1,
+    "arquetipo": "Operador Líder Organizador",
+    "descricao_arquetipo": "Atua de forma versátil e confiável, mantendo rotinas sólidas e garantindo estabilidade no dia a dia.",
+    "foto": "https://lh3.googleusercontent.com/d/1aYfBEaG3yojIEI1kKccHbG5RCwW1_p8Z=s400",
+    "missao": "Vendedora Iniciante",
+    "tempo_missao": "1 mês",
+    "tempo_obm": "2 anos",
+    "pontos_fortes": null,
+    "oportunidades": null
+  },
+  {
+    "nome": "Tamara",
+    "acao": -0.4,
+    "planejamento": 4.8,
+    "lideranca": 0.6,
+    "arquetipo": "Técnico Reservado Estratégico",
+    "descricao_arquetipo": "Pensa profundamente e entende o sistema, planejando soluções de alta complexidade e direcionando melhorias estruturais.",
+    "foto": "https://lh3.googleusercontent.com/d/1aJhC28KvmKFM-XEiUgbz1MaBsFnlzhUg=s400",
+    "missao": "Operadora de Caixa",
+    "tempo_missao": "10 meses",
+    "tempo_obm": "1 ano",
+    "pontos_fortes": null,
+    "oportunidades": null
+  },
+  {
+    "nome": "Victor H",
+    "acao": 0.4,
+    "planejamento": 3.0,
+    "lideranca": -0.3,
+    "arquetipo": "Técnico Reservado Estratégico",
+    "descricao_arquetipo": "Pensa profundamente e entende o sistema, planejando soluções de alta complexidade e direcionando melhorias estruturais.",
+    "foto": "https://lh3.googleusercontent.com/d/1Yc0PMWPUrtM1Ghbm2qrLj12bW1lYfogl=s400",
+    "missao": "Vendedor Iniciante",
+    "tempo_missao": "3 meses",
+    "tempo_obm": "3 meses",
+    "pontos_fortes": null,
+    "oportunidades": null
+  },
+  {
+    "nome": "Ney",
+    "acao": 5.4,
+    "planejamento": -1.0,
+    "lideranca": 4.6,
+    "arquetipo": "Mobilizador Executor Intuitivo",
+    "descricao_arquetipo": "Faz acontecer com energia e influência, atuando de forma rápida, espontânea e guiada pelo ritmo do momento.",
+    "foto": "https://lh3.googleusercontent.com/d/1WQ1iWbfSq4fXA2jc3L8DI_s8pHIZ4evJ=s400",
+    "missao": "Vendedor Controlante",
+    "tempo_missao": "1,5 meses",
+    "tempo_obm": "4 anos",
+    "pontos_fortes": null,
+    "oportunidades": null
+  },
+  {
+    "nome": "Alex",
+    "acao": 1.1,
+    "planejamento": 4.0,
+    "lideranca": 1.25,
+    "arquetipo": "Operador Líder Estratégico",
+    "descricao_arquetipo": "Atua de forma versátil e confiável, conectando a operação ao planejamento e antecipando necessidades.",
+    "foto": "https://lh3.googleusercontent.com/d/1kt5QGy6BDDl7CJVzIbf7SY9V7sgMuEta=s400",
+    "missao": "Vendedor Ocupante",
+    "tempo_missao": "1,5 meses",
+    "tempo_obm": "2 anos",
+    "pontos_fortes": null,
+    "oportunidades": null
+  },
+  {
+    "nome": "Léo",
+    "acao": -1.7,
+    "planejamento": 5.1,
+    "lideranca": -1.7,
+    "arquetipo": "Técnico Reservado Estratégico",
+    "descricao_arquetipo": "Pensa profundamente e entende o sistema, planejando soluções de alta complexidade e direcionando melhorias estruturais.",
+    "foto": "https://lh3.googleusercontent.com/d/1rhkHcFEtU_13On0Ff7ib-Vc18BTz9mgJ=s400",
+    "missao": "Vendedor Iniciante",
+    "tempo_missao": "1 mês",
+    "tempo_obm": "1,2 anos",
+    "pontos_fortes": null,
+    "oportunidades": null
+  },
+  {
+    "nome": "Douglas",
+    "acao": 0.4,
+    "planejamento": 4.0,
+    "lideranca": 1.6,
+    "arquetipo": "Facilitador Estratégico",
+    "descricao_arquetipo": "Organiza, dá suporte e estrutura o trabalho com visão antecipada, criando bases e padrões mais robustos.",
+    "foto": "https://lh3.googleusercontent.com/d/1bUXUJ5ogOS9y0grleJ5m4eMj0bpqdnQI=s400",
+    "missao": "Vendedor Iniciante",
+    "tempo_missao": "6 meses",
+    "tempo_obm": "6 meses",
+    "pontos_fortes": null,
+    "oportunidades": null
+  },
+  {
+    "nome": "Ana",
+    "acao": 4.7,
+    "planejamento": 0.4,
+    "lideranca": 3.9,
+    "arquetipo": "Mobilizador Executor Intuitivo",
+    "descricao_arquetipo": "Faz acontecer com energia e influência, atuando de forma rápida, espontânea e guiada pelo ritmo do momento.",
+    "foto": "https://lh3.googleusercontent.com/d/1UF8-pFPsH9yAKyHc3jbSFmgBrz8Nu48u=s400",
+    "missao": "Líder de Seção Expansão",
+    "tempo_missao": "1 mês",
+    "tempo_obm": "1,2 anos",
+    "pontos_fortes": null,
+    "oportunidades": null
+  }
+]
+  </script>
+
+  <script>
+  // ------------ 1. Carregar dados do JSON ------------
+  function carregarDados() {
+    const raw = document.getElementById("dados-json").textContent;
+    return JSON.parse(raw);
+  }
+
+  // ------------ 2. Helpers de arquétipo ------------
+  function extrairBaseEEstilo(arquetipo) {
+    if (!arquetipo || typeof arquetipo !== "string") {
+      return { base: "", estilo: "" };
+    }
+    const partes = arquetipo.split(" ").filter(Boolean);
+    if (partes.length === 1) {
+      return { base: partes[0], estilo: "" };
+    }
+    const estilo = partes[partes.length - 1];
+    const base = partes.slice(0, -1).join(" ");
+    return { base, estilo };
+  }
+
+  function escolherCor(arquetipo) {
+    if (!arquetipo) return "#555";
+    const { base } = extrairBaseEEstilo(arquetipo);
+    const mapBase = {
+      "Mobilizador Executor": "#ffb347",
+      "Profissional Equilibrado": "#2f7ed8",
+      "Engenheiro de Processos": "#9b59b6",
+      "Planejador Operacional": "#16a085",
+      "Líder Equilibrado": "#0d9e6c",
+      "Diplomata Social": "#f1c40f",
+      "Executor Líder": "#e74c3c",
+      "Operador Líder": "#8e44ad",
+      "Facilitador": "#1abc9c",
+      "Executor Solo": "#c0392b",
+      "Técnico Equilibrado": "#7f8c8d",
+      "Técnico Reservado": "#95a5a6"
+    };
+    return mapBase[base] || "#ffffff";
+  }
+
+  // ------------ 3. Descrição automática ------------
+  function descricaoArquetipo(arq) {
+    if (!arq || typeof arq !== "string") return "";
+    const { base, estilo } = extrairBaseEEstilo(arq);
+
+    const descBase = {
+      "Mobilizador Executor": "Faz acontecer puxando o time com alta energia e influência.",
+      "Líder Equilibrado": "Comunica bem, estrutura processos e sustenta rituais e rotinas.",
+      "Diplomata Social": "Concilia, negocia e ajuda a manter um bom clima entre as pessoas.",
+      "Executor Líder": "Parte para a ação com foco em resultado no campo, de forma prática.",
+      "Operador Líder": "Perfil versátil, consistente e confiável para diferentes funções.",
+      "Facilitador": "Organiza, estrutura e dá suporte às rotinas e à operação diária.",
+      "Executor Solo": "Entrega rápido com precisão, com foco forte em resultado.",
+      "Técnico Equilibrado": "Analisa dados, enxerga padrões e ajuda a melhorar processos.",
+      "Técnico Reservado": "Pensa profundamente o sistema, ótimo para padrões e melhorias complexas."
+    };
+
+    const descEstilo = {
+      "Estratégico": "Planeja bem, antecipa cenários e constrói processos.",
+      "Organizador": "Mantém rotinas, estrutura tarefas e dá ordem ao dia.",
+      "Intuitivo": "Age mais pelo ritmo e urgência do momento."
+    };
+
+    const d1 = descBase[base] || "";
+    const d2 = descEstilo[estilo] || "";
+    return d1 + (d2 ? "\n\n" + d2 : "");
+  }
+
+  // ------------ 4. Preencher campos de texto ------------
+  function preencherCampoTexto(el, valor) {
+    if (!el) return;
+    if (!valor) {
+      el.textContent = "";
+      return;
+    }
+    if (Array.isArray(valor)) {
+      el.textContent = valor.join(" • ");
+    } else {
+      el.textContent = String(valor);
+    }
+  }
+
+  // ------------ 5. Desenhar o cubo 3D ------------
+  function desenharCubo(pessoas) {
+    const x = pessoas.map(p => p.acao - 2);
+    const y = pessoas.map(p => p.lideranca - 2);
+    const z = pessoas.map(p => p.planejamento - 2);
+
+    const trace = {
+      x,
+      y,
+      z,
+      text: pessoas.map(p => p.nome),
+      customdata: pessoas,
+      mode: "markers+text",
+      type: "scatter3d",
+      marker: {
+        size: 12,
+        color: pessoas.map(p => escolherCor(p.arquetipo)),
+        opacity: 0.95,
+        line: { width: 1, color: "#fff" }
+      },
+      textposition: "top center",
+      textfont: { size: 10 },
+      hovertemplate: "%{text}<extra></extra>"
+    };
+
+    const allVals = [...x, ...y, ...z];
+    const maxAbs = Math.max(...allVals.map(v => Math.abs(v))) + 0.5;
+
+    const layout = {
+      margin: { l: 0, r: 0, t: 0, b: 0 },
+      scene: {
+        xaxis: {
+          title: "Ação",
+          zeroline: true,
+          zerolinecolor: "#333",
+          range: [-maxAbs, maxAbs]
+        },
+        yaxis: {
+          title: "Liderança",
+          zeroline: true,
+          zerolinecolor: "#333",
+          range: [-maxAbs, maxAbs]
+        },
+        zaxis: {
+          title: "Planejamento",
+          zeroline: true,
+          zerolinecolor: "#333",
+          range: [-maxAbs, maxAbs]
+        },
+        aspectmode: "cube",
+        camera: {
+          eye: { x: 1.6, y: 1.6, z: 1.1 },
+          up: { x: 0, y: 1, z: 0 },
+          center: { x: 0, y: 0, z: 0 }
+        }
+      }
+    };
+
+    Plotly.newPlot("plot", [trace], layout);
+
+    // clique em ponto
+    document.getElementById("plot").on("plotly_click", function (data) {
+      const point = data.points && data.points[0];
+      if (!point) return;
+      const p = point.customdata;
+      if (!p) return;
+      atualizarPainel(p);
+    });
+  }
+
+  // ------------ 6. Atualizar painel lateral ------------
+  function atualizarPainel(p) {
+    if (!p) return;
+
+    const placeholder = document.getElementById("placeholder-selecao");
+    if (placeholder) placeholder.style.display = "none";
+
+    document.getElementById("nome").textContent = p.nome || "";
+    document.getElementById("missao-top").textContent = p.missao || "";
+    document.getElementById("arquetipo").textContent = p.arquetipo || "";
+
+    document.getElementById("descricao-arquetipo").textContent =
+      p.descricao_arquetipo || descricaoArquetipo(p.arquetipo || "");
+
+    document.getElementById("missao").textContent = p.missao || "";
+    document.getElementById("tempo-missao").textContent = p.tempo_missao || "";
+    document.getElementById("tempo-obm").textContent = p.tempo_obm || "";
+
+    preencherCampoTexto(document.getElementById("pontos-fortes"), p.pontos_fortes);
+    preencherCampoTexto(document.getElementById("oportunidades"), p.oportunidades);
+
+    const fotoDiv = document.getElementById("foto");
+    fotoDiv.innerHTML = "";
+    fotoDiv.style.backgroundColor = "#002645";
+
+    const url = (p.foto || "").trim();
+    if (!url) return;
+
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = p.nome;
+
+    img.onload = () => {
+      fotoDiv.style.backgroundColor = "transparent";
+    };
+    img.onerror = () => {
+      fotoDiv.innerHTML = "";
+      fotoDiv.style.backgroundColor = "#002645";
+    };
+
+    fotoDiv.appendChild(img);
+  }
+
+  // ------------ 7. Câmeras / Visões (Liderança × Ação etc.) ------------
+  const cameras = {
+    // Y = Liderança, X = Ação (Planejamento em profundidade)
+    "acao-lideranca": {
+      eye: { x: 0.15, y: 0.15, z: 2 },
+      up:  { x: 0, y: 1, z: 0 }
+    },
+    // Y = Liderança, X = Planejamento (Ação em profundidade)
+    "lideranca-planejamento": {
+      eye: { x: -2.8, y: 0.15, z: 0.15 },
+      up:  { x: 0, y: 1, z: 0 }
+    },
+    // Y = Planejamento, X = Ação (Liderança em profundidade)
+    "planejamento-acao": {
+      eye: { x: 0.15, y: -2.8, z: 0.15 },
+      up:  { x: 0, y: 0, z: 1 }
+    },
+    // Visão 3D geral
+    "perspectiva": {
+      eye: { x: 1.6, y: 1.6, z: 1.1 },
+      up:  { x: 0, y: 1, z: 0 }
+    }
+  };
+
+  // animação manual usando relayout
+  function aplicarVisao(visao) {
+    const gd = document.getElementById("plot");
+    if (!gd || !gd._fullLayout || !gd._fullLayout.scene) return;
+
+    const alvo = cameras[visao] || cameras["perspectiva"];
+    const inicio = gd._fullLayout.scene.camera || {
+      eye: { x: 1.6, y: 1.6, z: 1.1 },
+      up:  { x: 0, y: 1, z: 0 }
+    };
+
+    const dur = 600;
+    const t0 = performance.now();
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function step(now) {
+      const tBruto = Math.min((now - t0) / dur, 1);
+      // ease-in-out
+      const t = tBruto < 0.5 ? 2 * tBruto * tBruto : -1 + (4 - 2 * tBruto) * tBruto;
+
+      const eye = {
+        x: lerp(inicio.eye.x, alvo.eye.x, t),
+        y: lerp(inicio.eye.y, alvo.eye.y, t),
+        z: lerp(inicio.eye.z, alvo.eye.z, t)
+      };
+      const up = {
+        x: lerp(inicio.up.x, alvo.up.x, t),
+        y: lerp(inicio.up.y, alvo.up.y, t),
+        z: lerp(inicio.up.z, alvo.up.z, t)
+      };
+
+      Plotly.relayout(gd, {
+        "scene.camera.eye": eye,
+        "scene.camera.up": up,
+        "scene.camera.center": { x: 0, y: 0, z: 0 }
+      });
+
+      if (tBruto < 1) {
+        requestAnimationFrame(step);
+      }
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  // ------------ 8. Inicializar app ------------
+  (function init() {
+    const pessoas = carregarDados();
+    if (!pessoas || pessoas.length === 0) {
+      alert("Nenhum registro carregado no JSON embutido.");
+      return;
+    }
+
+    desenharCubo(pessoas);
+
+    // botões de visão
+    document.querySelectorAll(".visao-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const visao = btn.getAttribute("data-visao");
+        aplicarVisao(visao);
+      });
+    });
+  })();
+</script>
+</body>
+</html>
